@@ -29,14 +29,10 @@ COCOPEN adalah aplikasi web yang dirancang untuk memfasilitasi pendaftaran calon
 ### Jadwal Waktu
 - Aktivitas jadwal waktu yang dikelola oleh tim backend.
 
-## Memulai
-Untuk informasi lebih lanjut tentang Coconut Computer Club, kunjungi [https://coconut.or.id](https://coconut.or.id).
-
 ## Kontributor
-- Arsitek Desain: [Nama]
-- UI/UX: [Nama]
-- Pengembang Frontend: [Saddah, Nawaf]
-- Pengembang Backend: [Morgan, Puma, Keisya, Bayin]
-- Insinyur Sistem: [Syaf, Ulka, dll.]
-- Pengujian: [Udin]
-- Manajer Proyek & Bisnis: [Teguh, Fajar, Keisya]
+- Manajer Proyek: [Tege]
+- Arsitek Desain: [Fajrul, Keisya]
+- UI/UX: [Naufal]
+- Frontend Dev: [Saudah, Nawat]
+- Backend Dev: [Morgan, Puma, Keisya, Bayin]
+- Sistem Engineer: [Syan, Tege, Udin, Fajrul, Dedes, Dlka]
