@@ -1,0 +1,53 @@
+package controllers
+
+import (
+    "cocopen-backend/dto"
+    "cocopen-backend/services"
+    "cocopen-backend/utils"
+    "database/sql"
+    "encoding/json"
+    "errors"
+    "net/http"
+    "time"
+)
+
+func ForgotPassword(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        if r.Method != http.MethodPost {
+            panic(errors.New("method tidak diizinkan"))
+        }
+
+        var req dto.ForgotPasswordRequest
+        if err := json.NewDecoder(r.Body).Decode(&req); 
+		err != nil {
+            panic(errors.New("format JSON tidak valid"))
+        }
+
+        userID, err := services.GetUserByEmail(db, req.Email)
+        if err != nil {
+            if err == sql.ErrNoRows {
+                panic(errors.New("email tidak terdaftar"))
+            }
+            panic(err)
+        }
+
+        token := utils.GenerateRandomToken(32)
+        expiresAt := time.Now().Add(1 * time.Hour)
+
+        if err := services.GeneratePasswordResetToken(db, userID, token, expiresAt); 
+		err != nil {
+            panic(err)
+        }
+
+        if err := utils.SendResetPasswordEmail(req.Email, token); 
+		err != nil {
+            panic(err)
+        }
+
+        utils.JSONResponse(w, http.StatusOK, map[string]interface{}{
+            "success": true,
+            "status":  http.StatusOK,
+            "message": "Link reset password sudah dikirim ke email.",
+        })
+    }
+}
