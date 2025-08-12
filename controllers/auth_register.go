@@ -14,39 +14,52 @@ import (
 func Register(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         if r.Method != http.MethodPost {
-            panic(errors.New("method tidak diizinkan"))
+            utils.Error(w, http.StatusMethodNotAllowed, "Metode tidak diizinkan")
+            return
         }
 
         var req dto.RegisterRequest
         if err := json.NewDecoder(r.Body).Decode(&req); 
 		err != nil {
-            panic(errors.New("format JSON tidak valid"))
+            utils.Error(w, http.StatusBadRequest, "Format JSON tidak valid")
+            return
         }
 
-        if req.Username == "" || req.Email == "" || req.Password == "" {
-            panic(errors.New("semua field wajib diisi"))
+        if req.Username == "" || req.Email == "" || req.Password == "" || req.ConfirmPassword == "" {
+            utils.Error(w, http.StatusBadRequest, "Semua field wajib diisi")
+            return
+        }
+
+        if req.Password != req.ConfirmPassword {
+            utils.Error(w, http.StatusBadRequest, "Password dan konfirmasi tidak cocok")
+            return
         }
 
         if !utils.IsValidUsername(req.Username) {
-            panic(errors.New("username tidak valid (minimal 3 karakter, huruf/angka/_)"))
+            utils.Error(w, http.StatusBadRequest, "Username tidak valid (minimal 3 karakter, huruf/angka/_)")
+            return
         }
         if !utils.IsValidEmail(req.Email) {
-            panic(errors.New("format email tidak valid"))
+            utils.Error(w, http.StatusBadRequest, "Format email tidak valid")
+            return
         }
         if !utils.IsValidPassword(req.Password) {
-            panic(errors.New("password harus minimal 8 karakter, mengandung huruf besar, angka, dan simbol"))
+            utils.Error(w, http.StatusBadRequest, "Password harus minimal 8 karakter, mengandung huruf besar, angka, dan simbol")
+            return
         }
 
         _, _, _, _, _, err := services.GetUserByUsername(db, req.Username)
         if err == nil {
-            panic(errors.New("username sudah digunakan"))
+            utils.Error(w, http.StatusConflict, "Username sudah digunakan")
+            return
         } else if err != sql.ErrNoRows {
             panic(err)
         }
 
         _, err = services.GetUserByEmail(db, req.Email)
         if err == nil {
-            panic(errors.New("email sudah digunakan"))
+            utils.Error(w, http.StatusConflict, "Email sudah digunakan")
+            return
         } else if err != sql.ErrNoRows {
             panic(err)
         }

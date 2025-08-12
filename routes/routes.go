@@ -2,11 +2,11 @@
 package routes
 
 import (
-    "net/http"
-    "database/sql"
+	"database/sql"
+	"net/http"
 
-    "cocopen-backend/controllers"
-    "cocopen-backend/middleware"
+	"cocopen-backend/controllers"
+	"cocopen-backend/middleware"
 )
 
 func Setup(db *sql.DB) http.Handler {
@@ -27,6 +27,10 @@ func Setup(db *sql.DB) http.Handler {
 
     mux.HandleFunc("/reset-password", func(w http.ResponseWriter, r *http.Request) {
         controllers.ResetPassword(db)(w, r)
+    })
+
+    mux.HandleFunc("/verify", func(w http.ResponseWriter, r *http.Request) {
+        controllers.VerifyEmail(db)(w, r)
     })
 
     // 🔐 Protected routes - Harus login & role sesuai

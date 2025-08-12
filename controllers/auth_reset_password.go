@@ -1,42 +1,56 @@
 package controllers
 
 import (
-    "cocopen-backend/dto"
-    "cocopen-backend/services"
-    "cocopen-backend/utils"
-    "encoding/json"
-    "errors"
-    "net/http"
-    "database/sql"
-    "time"
+	"cocopen-backend/dto"
+	"cocopen-backend/services"
+	"cocopen-backend/utils"
+	"database/sql"
+	"encoding/json"
+	"net/http"
+	"time"
 )
 
 func ResetPassword(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         if r.Method != http.MethodPut {
-            panic(errors.New("method tidak diizinkan"))
+            utils.Error(w, http.StatusMethodNotAllowed, "Metode tidak diizinkan")
+			return
         }
 
         var req dto.ResetPasswordRequest
         if err := json.NewDecoder(r.Body).Decode(&req); 
 		err != nil {
-            panic(errors.New("format JSON tidak valid"))
+            utils.Error(w, http.StatusBadRequest, "Format JSON tidak valid")
+			return
         }
 
-        if req.NewPassword == "" || req.Token == "" {
-            panic(errors.New("token dan password baru harus diisi"))
+        if req.Token == "" || req.NewPassword == "" || req.ConfirmNewPassword == "" {
+            utils.Error(w, http.StatusBadRequest, "Token, password baru, dan konfirmasi password wajib diisi")
+			return
+        }
+
+        if req.NewPassword != req.ConfirmNewPassword {
+            utils.Error(w, http.StatusBadRequest, "Password baru dan konfirmasi password tidak sama")
+			return
+        }
+
+        if !utils.IsValidPassword(req.NewPassword) {
+            utils.Error(w, http.StatusBadRequest, "Password baru harus minimal 8 karakter, mengandung huruf besar, angka, dan simbol")
+			return
         }
 
         userID, expiresAt, err := services.ValidatePasswordResetToken(db, req.Token)
         if err != nil {
             if err == sql.ErrNoRows {
-                panic(errors.New("token reset password tidak valid"))
+                utils.Error(w, http.StatusBadRequest, "Token reset password tidak valid")
+				return
             }
             panic(err)
         }
 
         if expiresAt.Before(time.Now()) {
-            panic(errors.New("token reset password sudah kedaluwarsa"))
+            utils.Error(w, http.StatusBadRequest, "Token reset password telah kedaluwarsa")
+			return
         }
 
         hashedPassword, err := utils.HashPassword(req.NewPassword)

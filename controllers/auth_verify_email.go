@@ -3,7 +3,6 @@ package controllers
 import (
     "cocopen-backend/services"
     "cocopen-backend/utils"
-    "errors"
     "net/http"
     "time"
     "database/sql"
@@ -13,19 +12,22 @@ func VerifyEmail(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         token := r.URL.Query().Get("token")
         if token == "" {
-            panic(errors.New("token verifikasi harus disertakan"))
+            utils.Error(w, http.StatusBadRequest, "Token verifikasi wajib disertakan")
+			return
         }
 
         userID, expiresAt, err := services.ValidateVerificationToken(db, token)
         if err != nil {
             if err == sql.ErrNoRows {
-                panic(errors.New("token verifikasi tidak valid"))
+                utils.Error(w, http.StatusBadRequest, "Token verifikasi tidak valid")
+				return
             }
             panic(err)
         }
 
         if expiresAt.Before(time.Now()) {
-            panic(errors.New("token verifikasi sudah kedaluwarsa"))
+            utils.Error(w, http.StatusBadRequest, "Token verifikasi sudah kedaluwarsa")
+			return
         }
 
         if err := services.VerifyEmail(db, userID); 

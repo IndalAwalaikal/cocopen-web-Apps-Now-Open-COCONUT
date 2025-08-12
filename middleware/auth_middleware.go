@@ -17,11 +17,13 @@ func Auth(next http.HandlerFunc) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         authHeader := r.Header.Get("Authorization")
         if authHeader == "" {
-            panic("Authorization header diperlukan")
+            utils.Error(w, http.StatusUnauthorized, "Header Authorization diperlukan")
+			return
         }
 
         if !strings.HasPrefix(authHeader, "Bearer ") {
-            panic("format token harus Bearer <token>")
+            utils.Error(w, http.StatusUnauthorized, "Format token harus Bearer <token>")
+			return
         }
 
         tokenString := strings.TrimPrefix(authHeader, "Bearer ")
@@ -35,7 +37,8 @@ func Auth(next http.HandlerFunc) http.HandlerFunc {
         })
 
         if err != nil || !token.Valid {
-            panic("token tidak valid")
+            utils.Error(w, http.StatusUnauthorized, "Token tidak valid")
+			return
         }
 
         ctx := context.WithValue(r.Context(), userContextKey, claims)

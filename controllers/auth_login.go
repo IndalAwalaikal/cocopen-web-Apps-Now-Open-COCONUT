@@ -6,31 +6,34 @@ import (
     "cocopen-backend/utils"
     "database/sql"
     "encoding/json"
-    "errors"
     "net/http"
 )
 
 func Login(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         if r.Method != http.MethodPost {
-            panic(errors.New("method tidak diizinkan"))
+            utils.Error(w, http.StatusMethodNotAllowed, "Metode tidak diizinkan")
+            return
         }
 
         var req dto.LoginRequest
         if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-            panic(errors.New("format JSON tidak valid"))
+            utils.Error(w, http.StatusBadRequest, "Format JSON tidak valid")
+            return
         }
 
         user, hashed, err := services.Login(db, req.Username)
         if err != nil {
             if err == sql.ErrNoRows {
-                panic(errors.New("username tidak ditemukan atau belum diverifikasi"))
+                utils.Error(w, http.StatusNotFound, "Username tidak ditemukan")
+                return
             }
             panic(err)
         }
 
         if !utils.CheckPassword(req.Password, hashed) {
-            panic(errors.New("password salah"))
+            utils.Error(w, http.StatusUnauthorized, "Password salah")
+            return
         }
 
         token := utils.GenerateToken(user.IDUser, user.Username, user.Role)
