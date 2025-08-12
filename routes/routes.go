@@ -6,13 +6,14 @@ import (
 	"net/http"
 
 	"cocopen-backend/controllers"
-	"cocopen-backend/middleware"
+    "cocopen-backend/middleware"
 )
 
 func Setup(db *sql.DB) http.Handler {
     mux := http.NewServeMux()
 
-    // 🔓 Public routes - Tidak perlu login
+    //auth router
+
     mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
         controllers.Register(db)(w, r)
     })
@@ -33,22 +34,24 @@ func Setup(db *sql.DB) http.Handler {
         controllers.VerifyEmail(db)(w, r)
     })
 
-    // 🔐 Protected routes - Harus login & role sesuai
-    mux.HandleFunc("/admin/dashboard", 
-        middleware.Auth(
-            middleware.Role("admin")(
-                controllers.AdminDashboard(),
-            ),
-        ),
-    )
+    // Protected - User role
+    mux.Handle("/pendaftar/create", middleware.Auth(middleware.Role("user")(func(w http.ResponseWriter, r *http.Request) {
+        controllers.CreatePendaftar(db)(w, r)
+    })))
 
-    mux.HandleFunc("/user/dashboard", 
-        middleware.Auth(
-            middleware.Role("user")(
-                controllers.UserDashboard(),
-            ),
-        ),
-    )
+    // Protected - Admin role
+    mux.Handle("/pendaftar/all", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+        controllers.GetAllPendaftar(db)(w, r)
+    })))
+    mux.Handle("/pendaftar/", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+        controllers.GetPendaftarByID(db)(w, r)
+    })))
+    mux.Handle("/pendaftar/update", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+        controllers.UpdatePendaftar(db)(w, r)
+    })))
+    mux.Handle("/pendaftar/delete", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+        controllers.DeletePendaftar(db)(w, r)
+    })))
 
     return mux
 }

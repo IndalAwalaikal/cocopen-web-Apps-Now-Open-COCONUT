@@ -27,3 +27,21 @@ CREATE TABLE email_verification_tokens (
     INDEX idx_user_id (user_id),
     FOREIGN KEY (user_id) REFERENCES users(id_user) ON DELETE CASCADE
 );
+
+CREATE TABLE pendaftaran (
+    id_pendaftar INT AUTO_INCREMENT PRIMARY KEY,
+    nama_lengkap VARCHAR(100) NOT NULL,
+    asal_kampus VARCHAR(100) NOT NULL,
+    prodi VARCHAR(100) NOT NULL,
+    semester INT NOT NULL,
+    no_wa VARCHAR(15) NOT NULL,
+    domisili VARCHAR(100) NOT NULL,
+    alamat_sekarang TEXT NOT NULL,
+    tinggal_dengan VARCHAR(100) NOT NULL,
+    alasan_masuk TEXT NOT NULL,
+    pengetahuan_coconut TEXT,
+    foto_path VARCHAR(255) NOT NULL DEFAULT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    status ENUM('pending', 'diterima', 'ditolak') DEFAULT 'pending'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
