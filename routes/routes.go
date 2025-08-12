@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"cocopen-backend/controllers"
-	"cocopen-backend/middleware"
 )
 
 func Setup(db *sql.DB) http.Handler {
@@ -32,23 +31,6 @@ func Setup(db *sql.DB) http.Handler {
     mux.HandleFunc("/verify", func(w http.ResponseWriter, r *http.Request) {
         controllers.VerifyEmail(db)(w, r)
     })
-
-    // 🔐 Protected routes - Harus login & role sesuai
-    mux.HandleFunc("/admin/dashboard", 
-        middleware.Auth(
-            middleware.Role("admin")(
-                controllers.AdminDashboard(),
-            ),
-        ),
-    )
-
-    mux.HandleFunc("/user/dashboard", 
-        middleware.Auth(
-            middleware.Role("user")(
-                controllers.UserDashboard(),
-            ),
-        ),
-    )
 
     return mux
 }
