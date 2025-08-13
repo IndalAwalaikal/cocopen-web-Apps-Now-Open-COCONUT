@@ -28,6 +28,7 @@ func CreatePendaftar(db *sql.DB) http.HandlerFunc {
 		req.NamaLengkap = r.FormValue("nama_lengkap")
 		req.AsalKampus = r.FormValue("asal_kampus")
 		req.Prodi = r.FormValue("prodi")
+		req.Semester = r.FormValue("semester")
 		req.NoWA = r.FormValue("no_wa")
 		req.Domisili = r.FormValue("domisili")
 		req.AlamatSekarang = r.FormValue("alamat_sekarang")
@@ -35,13 +36,6 @@ func CreatePendaftar(db *sql.DB) http.HandlerFunc {
 		req.AlasanMasuk = r.FormValue("alasan_masuk")
 		req.PengetahuanCoconut = r.FormValue("pengetahuan_coconut")
 
-		semesterStr := r.FormValue("semester")
-		semester, err := strconv.Atoi(semesterStr)
-		if err != nil {
-			utils.Error(w, http.StatusBadRequest, "Semester harus berupa angka")
-			return
-		}
-		req.Semester = semester
 
 		file, header, err := r.FormFile("foto")
 		if err == nil {

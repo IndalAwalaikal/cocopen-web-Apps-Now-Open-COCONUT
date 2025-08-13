@@ -4,7 +4,7 @@ type CreatePendaftarRequest struct {
     NamaLengkap         string `json:"nama_lengkap"`
     AsalKampus          string `json:"asal_kampus"`
     Prodi               string `json:"prodi"`
-    Semester            int    `json:"semester"`
+    Semester            string `json:"semester"`
     NoWA                string `json:"no_wa"`
     Domisili            string `json:"domisili"`
     AlamatSekarang      string `json:"alamat_sekarang"`

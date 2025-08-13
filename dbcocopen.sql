@@ -28,12 +28,12 @@ CREATE TABLE email_verification_tokens (
     FOREIGN KEY (user_id) REFERENCES users(id_user) ON DELETE CASCADE
 );
 
-CREATE TABLE pendaftaran (
+CREATE TABLE pendaftar (
     id_pendaftar INT AUTO_INCREMENT PRIMARY KEY,
     nama_lengkap VARCHAR(100) NOT NULL,
     asal_kampus VARCHAR(100) NOT NULL,
     prodi VARCHAR(100) NOT NULL,
-    semester INT NOT NULL,
+    semester VARCHAR(20) NOT NULL,
     no_wa VARCHAR(15) NOT NULL,
     domisili VARCHAR(100) NOT NULL,
     alamat_sekarang TEXT NOT NULL,
