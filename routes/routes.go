@@ -12,6 +12,8 @@ import (
 func Setup(db *sql.DB) http.Handler {
     mux := http.NewServeMux()
 
+    mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("uploads"))))
+
     //auth router
 
     mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
@@ -43,14 +45,14 @@ func Setup(db *sql.DB) http.Handler {
     mux.Handle("/pendaftar/all", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
         controllers.GetAllPendaftar(db)(w, r)
     })))
-    mux.Handle("/pendaftar/", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
-        controllers.GetPendaftarByID(db)(w, r)
-    })))
     mux.Handle("/pendaftar/update", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
         controllers.UpdatePendaftar(db)(w, r)
     })))
     mux.Handle("/pendaftar/delete", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
         controllers.DeletePendaftar(db)(w, r)
+    })))
+    mux.Handle("/pendaftar/", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+        controllers.GetPendaftarByID(db)(w, r)
     })))
 
     return mux

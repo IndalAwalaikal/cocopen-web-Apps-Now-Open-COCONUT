@@ -56,14 +56,14 @@ func GetPendaftarByID(db *sql.DB, idPendaftar int) (models.Pendaftar, error) {
 }
 
 
-func UpdatePendaftar(db *sql.DB, idPendaftar int, status string, fotoPath string) error {
-	query := `
-		UPDATE pendaftar
-		SET status = ?, foto_path = ?, updated_at = NOW()
-		WHERE id_pendaftar = ?
-	`
-	_, err := db.Exec(query, status, fotoPath, idPendaftar)
-	return err
+func UpdatePendaftar(db *sql.DB, idPendaftar int, status string) error {
+    query := `
+        UPDATE pendaftar
+        SET status = ?, updated_at = NOW()
+        WHERE id_pendaftar = ?
+    `
+    _, err := db.Exec(query, status, idPendaftar)
+    return err
 }
 
 

@@ -8,7 +8,9 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 func CreatePendaftar(db *sql.DB) http.HandlerFunc {
@@ -38,14 +40,35 @@ func CreatePendaftar(db *sql.DB) http.HandlerFunc {
 
 
 		file, header, err := r.FormFile("foto")
-		if err == nil {
-			fotoName, err := utils.UploadFoto(file, header, utils.FotoPendaftarPath)
-			if err != nil {
-				utils.Error(w, http.StatusInternalServerError, "Gagal upload foto")
-				return
-			}
-			req.FotoPath = fotoName
+		if err != nil {
+    		if err == http.ErrMissingFile {
+        	utils.Error(w, http.StatusBadRequest, "Foto wajib diunggah")
+        	return
+    		} else {
+        	utils.Error(w, http.StatusBadRequest, "Gagal membaca file foto: " + err.Error())
+        	return
+   			}
 		}
+
+		defer file.Close()
+
+		ext := strings.ToLower(filepath.Ext(header.Filename))
+		if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".gif" {
+    		utils.Error(w, http.StatusBadRequest, "Format file tidak didukung. Gunakan JPG, PNG, atau GIF.")
+    		return
+		}
+
+		if header.Size > 2<<20 {
+    		utils.Error(w, http.StatusBadRequest, "Ukuran file maksimal 2 MB")
+    		return
+		}
+
+		fotoName, err := utils.UploadFoto(file, header, utils.FotoPendaftarPath)
+		if err != nil {
+    		utils.Error(w, http.StatusInternalServerError, "Gagal upload foto")
+    		return
+		}
+		req.FotoPath = fotoName
 
 		if req.NamaLengkap == "" || req.AsalKampus == "" || req.Prodi == "" || req.NoWA == "" {
 			utils.Error(w, http.StatusBadRequest, "Field wajib diisi")
@@ -91,6 +114,11 @@ func GetAllPendaftar(db *sql.DB) http.HandlerFunc {
 
 func GetPendaftarByID(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+            utils.Error(w, http.StatusMethodNotAllowed, "Hanya metode GET yang diizinkan")
+            return
+        }
+		
 		idStr := r.URL.Query().Get("id")
 		if idStr == "" {
 			utils.Error(w, http.StatusBadRequest, "Parameter id wajib diisi")
@@ -123,11 +151,11 @@ func UpdatePendaftar(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		err := r.ParseMultipartForm(10 << 20)
-		if err != nil {
-			utils.Error(w, http.StatusBadRequest, "Gagal memproses form")
-			return
-		}
+		err := r.ParseMultipartForm(10 << 20) 
+        if err != nil {
+            utils.Error(w, http.StatusBadRequest, "Gagal memproses form")
+            return
+        }
 
 		idStr := r.FormValue("id_pendaftar")
 		id, err := strconv.Atoi(idStr)
@@ -142,26 +170,10 @@ func UpdatePendaftar(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		oldData, err := services.GetPendaftarByID(db, id)
-		if err != nil {
-			utils.Error(w, http.StatusNotFound, "Pendaftar tidak ditemukan")
-			return
-		}
-
-		fotoPath := oldData.FotoPath
-		if file, header, err := r.FormFile("foto"); err == nil {
-			utils.HapusFoto(utils.FotoPendaftarPath, oldData.FotoPath)
-			newFoto, err := utils.UploadFoto(file, header, utils.FotoPendaftarPath)
-			if err != nil {
-				utils.Error(w, http.StatusInternalServerError, "Gagal upload foto baru")
-				return
-			}
-			fotoPath = newFoto
-		}
-
-		if err := services.UpdatePendaftar(db, id, status, fotoPath); err != nil {
-			panic(errors.New("gagal memperbarui pendaftar: " + err.Error()))
-		}
+		if err := services.UpdatePendaftar(db, id, status); 
+		err != nil {
+            panic(errors.New("gagal memperbarui pendaftar: " + err.Error()))
+        }
 
 		utils.JSONResponse(w, http.StatusOK, map[string]interface{}{
 			"success": true,
