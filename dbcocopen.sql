@@ -22,7 +22,7 @@ CREATE TABLE email_verification_tokens (
     id_email_verification_token INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     token VARCHAR(255) NOT NULL UNIQUE,
-    expiry_at DATETIME NOT NULL,
+    expires_at DATETIME NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_user_id (user_id),
     FOREIGN KEY (user_id) REFERENCES users(id_user) ON DELETE CASCADE

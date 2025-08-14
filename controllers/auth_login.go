@@ -43,12 +43,6 @@ func Login(db *sql.DB) http.HandlerFunc {
             "status":  http.StatusOK,
             "message": "Anda berhasil login",
             "token":   token,
-            "user": map[string]interface{}{
-                "id":       user.IDUser,
-                "username": user.Username,
-                "role":     user.Role,
-                "email":    user.Email,
-            },
         })
     }
 }
