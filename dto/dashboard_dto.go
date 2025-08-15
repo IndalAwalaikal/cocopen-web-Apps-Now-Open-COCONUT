@@ -8,7 +8,7 @@ type DashboardResponse struct {
 }
 
 type UserSummary struct {
-    ID       int    `json:"id"`
+    IDUser   int    `json:"id_user"`
     Username string `json:"username"`
     Role     string `json:"role"`
 }

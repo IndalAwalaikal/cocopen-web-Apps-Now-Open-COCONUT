@@ -37,6 +37,15 @@ func Setup(db *sql.DB) http.Handler {
     })
 
     // Protected - User role
+
+    mux.Handle("/profile", middleware.Auth(func(w http.ResponseWriter, r *http.Request) {
+		controllers.GetProfile(db)(w, r)
+	}))
+
+	mux.Handle("/profile/update", middleware.Auth(func(w http.ResponseWriter, r *http.Request) {
+		controllers.UpdateProfile(db)(w, r)
+	}))
+    
     mux.Handle("/pendaftar/create", middleware.Auth(middleware.Role("user")(func(w http.ResponseWriter, r *http.Request) {
         controllers.CreatePendaftar(db)(w, r)
     })))

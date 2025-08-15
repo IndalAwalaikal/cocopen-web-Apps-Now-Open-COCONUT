@@ -19,4 +19,5 @@ type Pendaftar struct {
     CreatedAt           time.Time `json:"created_at"`
     UpdatedAt           time.Time `json:"updated_at"`
     Status              string    `json:"status"`
+    UserID              *int      `json:"user_id,omitempty"`
 }

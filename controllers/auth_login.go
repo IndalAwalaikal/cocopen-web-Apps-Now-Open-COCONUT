@@ -36,7 +36,7 @@ func Login(db *sql.DB) http.HandlerFunc {
             return
         }
 
-        token := utils.GenerateToken(user.IDUser, user.Username, user.Role)
+        token := utils.GenerateToken(user.IDUser, user.Username, user.FullName, user.Role, user.ProfilePicture)
 
         utils.JSONResponse(w, http.StatusOK, map[string]interface{}{
             "success": true,

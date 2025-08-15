@@ -2,37 +2,37 @@
 package services
 
 import (
-    "database/sql"
-	"cocopen-backend/dto"
 	"cocopen-backend/models"
+	"database/sql"
 )
 
-func CreatePendaftar(db *sql.DB, req dto.CreatePendaftarRequest) error {
+func CreatePendaftar(db *sql.DB, p models.Pendaftar) error {
     query := `
         INSERT INTO pendaftar (
             nama_lengkap, asal_kampus, prodi, semester, no_wa, domisili,
             alamat_sekarang, tinggal_dengan, alasan_masuk, pengetahuan_coconut,
-            foto_path
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            foto_path, status, user_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
 
     _, err := db.Exec(query,
-        req.NamaLengkap,
-        req.AsalKampus,
-        req.Prodi,
-        req.Semester,
-        req.NoWA,
-        req.Domisili,
-        req.AlamatSekarang,
-        req.TinggalDengan,
-        req.AlasanMasuk,
-        req.PengetahuanCoconut,
-        req.FotoPath,
+        p.NamaLengkap,
+        p.AsalKampus,
+        p.Prodi,
+        p.Semester,
+        p.NoWA,
+        p.Domisili,
+        p.AlamatSekarang,
+        p.TinggalDengan,
+        p.AlasanMasuk,
+        p.PengetahuanCoconut,
+        p.FotoPath,
+        p.Status,
+        p.UserID,
     )
 
     return err
 }
-
 func GetAllPendaftar(db *sql.DB) (*sql.Rows, error) {
     return db.Query(
         "SELECT id_pendaftar, nama_lengkap, asal_kampus, prodi, semester, no_wa, domisili, alamat_sekarang, tinggal_dengan, alasan_masuk, pengetahuan_coconut, foto_path, created_at, updated_at, status FROM pendaftar ORDER BY created_at DESC",

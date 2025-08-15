@@ -6,8 +6,8 @@ import (
 
 func Register(db *sql.DB, username, email, passwordHash, role string) (int, error) {
     res, err := db.Exec(
-        "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
-        username, email, passwordHash, role,
+        "INSERT INTO users (username, full_name, email, password, profile_picture, role, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        username, username, email, passwordHash, "default.jpg", role, false,
     )
     if err != nil {
         return 0, err

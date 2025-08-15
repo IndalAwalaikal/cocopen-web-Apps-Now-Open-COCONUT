@@ -1,3 +1,4 @@
+// utils/upload.go
 package utils
 
 import (
@@ -10,6 +11,7 @@ import (
 )
 
 const FotoPendaftarPath = "uploads/foto_pendaftar"
+const ProfilePhotoPath = "uploads/profile"
 
 func UploadFoto(file multipart.File, header *multipart.FileHeader, uploadDir string) (string, error) {
 	defer file.Close()

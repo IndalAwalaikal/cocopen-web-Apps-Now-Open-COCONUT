@@ -9,7 +9,7 @@ import (
 func Role(requiredRole string) func(http.HandlerFunc) http.HandlerFunc {
     return func(next http.HandlerFunc) http.HandlerFunc {
         return func(w http.ResponseWriter, r *http.Request) {
-            claims, ok := r.Context().Value(userContextKey).(*utils.Claims)
+            claims, ok := r.Context().Value(UserContextKey).(*utils.Claims)
             if !ok {
                 utils.Error(w, http.StatusUnauthorized, "Akses ditolak: pengguna tidak terautentikasi")
 				return

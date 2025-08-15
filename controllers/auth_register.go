@@ -1,14 +1,14 @@
 package controllers
 
 import (
-    "cocopen-backend/dto"
-    "cocopen-backend/services"
-    "cocopen-backend/utils"
-    "database/sql"
-    "encoding/json"
-    "errors"
-    "net/http"
-    "time"
+	"cocopen-backend/dto"
+	"cocopen-backend/services"
+	"cocopen-backend/utils"
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"time"
 )
 
 func Register(db *sql.DB) http.HandlerFunc {
@@ -30,8 +30,12 @@ func Register(db *sql.DB) http.HandlerFunc {
             return
         }
 
-        if req.Password != req.ConfirmPassword {
-            utils.Error(w, http.StatusBadRequest, "Password dan konfirmasi tidak cocok")
+        _, _, _, _, _, err := services.GetUserByUsername(db, req.Username)
+        if err == nil {
+            utils.Error(w, http.StatusConflict, "Username sudah digunakan")
+            return
+        } else if err != sql.ErrNoRows {
+            utils.Error(w, http.StatusInternalServerError, "Gagal memeriksa username")
             return
         }
 
@@ -39,29 +43,29 @@ func Register(db *sql.DB) http.HandlerFunc {
             utils.Error(w, http.StatusBadRequest, "Username tidak valid (minimal 3 karakter, huruf/angka/_)")
             return
         }
-        if !utils.IsValidEmail(req.Email) {
-            utils.Error(w, http.StatusBadRequest, "Format email tidak valid")
-            return
-        }
-        if !utils.IsValidPassword(req.Password) {
-            utils.Error(w, http.StatusBadRequest, "Password harus minimal 8 karakter, mengandung huruf besar, angka, dan simbol")
-            return
-        }
-
-        _, _, _, _, _, err := services.GetUserByUsername(db, req.Username)
-        if err == nil {
-            utils.Error(w, http.StatusConflict, "Username sudah digunakan")
-            return
-        } else if err != sql.ErrNoRows {
-            panic(err)
-        }
 
         _, err = services.GetUserByEmail(db, req.Email)
         if err == nil {
             utils.Error(w, http.StatusConflict, "Email sudah digunakan")
             return
         } else if err != sql.ErrNoRows {
-            panic(err)
+            utils.Error(w, http.StatusInternalServerError, "Gagal memeriksa email")
+            return
+        }
+
+        if !utils.IsValidEmail(req.Email) {
+            utils.Error(w, http.StatusBadRequest, "Format email tidak valid")
+            return
+        }
+
+        if req.Password != req.ConfirmPassword {
+            utils.Error(w, http.StatusBadRequest, "Password dan konfirmasi tidak cocok")
+            return
+        }
+
+        if !utils.IsValidPassword(req.Password) {
+            utils.Error(w, http.StatusBadRequest, "Password harus minimal 8 karakter, mengandung huruf besar, angka, dan simbol")
+            return
         }
 
         hashedPassword, err := utils.HashPassword(req.Password)
@@ -84,7 +88,8 @@ func Register(db *sql.DB) http.HandlerFunc {
 
         err = utils.SendVerificationEmail(req.Email, verificationToken)
         if err != nil {
-            panic(errors.New("gagal mengirim email verifikasi: " + err.Error()))
+            utils.Error(w, http.StatusInternalServerError, "Gagal mengirim email verifikasi. Pastikan email valid.")
+            return
         }
 
         utils.JSONResponse(w, http.StatusCreated, map[string]interface{}{

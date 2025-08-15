@@ -8,10 +8,13 @@ import (
     "cocopen-backend/config"
     "cocopen-backend/routes"
     "cocopen-backend/middleware"
+    "cocopen-backend/utils"
 )
 
 func main() {
     config.LoadEnv()
+
+    utils.InitJWTSecret()
 
     db := config.ConnectToDB()
     defer db.Close()

@@ -14,78 +14,99 @@ import (
 )
 
 func CreatePendaftar(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			utils.Error(w, http.StatusMethodNotAllowed, "Metode tidak diizinkan")
-			return
-		}
+    return func(w http.ResponseWriter, r *http.Request) {
+        if r.Method != http.MethodPost {
+            utils.Error(w, http.StatusMethodNotAllowed, "Metode tidak diizinkan")
+            return
+        }
 
-		err := r.ParseMultipartForm(10 << 20)
-		if err != nil {
-			utils.Error(w, http.StatusBadRequest, "Gagal memproses form")
-			return
-		}
+        claims, ok := r.Context().Value("user_claims").(*utils.Claims)
+        if !ok {
+            utils.Error(w, http.StatusUnauthorized, "Akses ditolak")
+            return
+        }
 
-		var req dto.CreatePendaftarRequest
-		req.NamaLengkap = r.FormValue("nama_lengkap")
-		req.AsalKampus = r.FormValue("asal_kampus")
-		req.Prodi = r.FormValue("prodi")
-		req.Semester = r.FormValue("semester")
-		req.NoWA = r.FormValue("no_wa")
-		req.Domisili = r.FormValue("domisili")
-		req.AlamatSekarang = r.FormValue("alamat_sekarang")
-		req.TinggalDengan = r.FormValue("tinggal_dengan")
-		req.AlasanMasuk = r.FormValue("alasan_masuk")
-		req.PengetahuanCoconut = r.FormValue("pengetahuan_coconut")
+        err := r.ParseMultipartForm(10 << 20)
+        if err != nil {
+            utils.Error(w, http.StatusBadRequest, "Gagal memproses form")
+            return
+        }
 
+        var req dto.CreatePendaftarRequest
+        req.NamaLengkap = r.FormValue("nama_lengkap")
+        req.AsalKampus = r.FormValue("asal_kampus")
+        req.Prodi = r.FormValue("prodi")
+        req.Semester = r.FormValue("semester")
+        req.NoWA = r.FormValue("no_wa")
+        req.Domisili = r.FormValue("domisili")
+        req.AlamatSekarang = r.FormValue("alamat_sekarang")
+        req.TinggalDengan = r.FormValue("tinggal_dengan")
+        req.AlasanMasuk = r.FormValue("alasan_masuk")
+        req.PengetahuanCoconut = r.FormValue("pengetahuan_coconut")
 
-		file, header, err := r.FormFile("foto")
-		if err != nil {
-    		if err == http.ErrMissingFile {
-        	utils.Error(w, http.StatusBadRequest, "Foto wajib diunggah")
-        	return
-    		} else {
-        	utils.Error(w, http.StatusBadRequest, "Gagal membaca file foto: " + err.Error())
-        	return
-   			}
-		}
+        if req.NamaLengkap == "" || req.AsalKampus == "" || req.Prodi == "" || req.NoWA == "" {
+            utils.Error(w, http.StatusBadRequest, "Field wajib diisi")
+            return
+        }
 
-		defer file.Close()
+        file, header, err := r.FormFile("foto")
+        if err != nil {
+            if err == http.ErrMissingFile {
+                utils.Error(w, http.StatusBadRequest, "Foto wajib diunggah")
+                return
+            }
+            utils.Error(w, http.StatusBadRequest, "Gagal baca file foto")
+            return
+        }
+        defer file.Close()
 
-		ext := strings.ToLower(filepath.Ext(header.Filename))
-		if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".gif" {
-    		utils.Error(w, http.StatusBadRequest, "Format file tidak didukung. Gunakan JPG, PNG, atau GIF.")
-    		return
-		}
+        ext := strings.ToLower(filepath.Ext(header.Filename))
+        if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".gif" {
+            utils.Error(w, http.StatusBadRequest, "Format file tidak didukung")
+            return
+        }
 
-		if header.Size > 2<<20 {
-    		utils.Error(w, http.StatusBadRequest, "Ukuran file maksimal 2 MB")
-    		return
-		}
+        if header.Size > 2<<20 {
+            utils.Error(w, http.StatusBadRequest, "Ukuran file maksimal 2 MB")
+            return
+        }
 
-		fotoName, err := utils.UploadFoto(file, header, utils.FotoPendaftarPath)
-		if err != nil {
-    		utils.Error(w, http.StatusInternalServerError, "Gagal upload foto")
-    		return
-		}
-		req.FotoPath = fotoName
+        fotoName, err := utils.UploadFoto(file, header, utils.FotoPendaftarPath)
+        if err != nil {
+            utils.Error(w, http.StatusInternalServerError, "Gagal upload foto")
+            return
+        }
 
-		if req.NamaLengkap == "" || req.AsalKampus == "" || req.Prodi == "" || req.NoWA == "" {
-			utils.Error(w, http.StatusBadRequest, "Field wajib diisi")
-			return
-		}
+        pendaftar := models.Pendaftar{
+            NamaLengkap:        req.NamaLengkap,
+            AsalKampus:         req.AsalKampus,
+            Prodi:              req.Prodi,
+            Semester:           req.Semester,
+            NoWA:               req.NoWA,
+            Domisili:           req.Domisili,
+            AlamatSekarang:     req.AlamatSekarang,
+            TinggalDengan:      req.TinggalDengan,
+            AlasanMasuk:        req.AlasanMasuk,
+            PengetahuanCoconut: req.PengetahuanCoconut,
+            FotoPath:           fotoName,
+            Status:             "pending",
+            UserID:             &claims.IDUser,
+        }
 
-		if err := services.CreatePendaftar(db, req); err != nil {
-			panic(errors.New("gagal menambahkan pendaftar: " + err.Error()))
-		}
+        if err := services.CreatePendaftar(db, pendaftar); err != nil {
+            panic(errors.New("gagal menambahkan pendaftar: " + err.Error()))
+        }
 
-		utils.JSONResponse(w, http.StatusCreated, map[string]interface{}{
-			"success": true,
-			"status":  http.StatusCreated,
-			"message": "Pendaftar berhasil dibuat",
-		})
-	}
+        utils.JSONResponse(w, http.StatusCreated, map[string]interface{}{
+            "success": true,
+            "message": "Pendaftar berhasil dibuat",
+            "data": map[string]string{
+                "foto_url": "/uploads/foto_pendaftar/" + fotoName,
+            },
+        })
+    }
 }
+
 
 func GetAllPendaftar(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -168,6 +189,11 @@ func UpdatePendaftar(db *sql.DB) http.HandlerFunc {
 		if status == "" {
 			utils.Error(w, http.StatusBadRequest, "Status wajib diisi")
 			return
+		}
+
+		if status != "pending" && status != "diterima" && status != "ditolak" {
+    		utils.Error(w, http.StatusBadRequest, "Status tidak valid")
+    		return
 		}
 
 		if err := services.UpdatePendaftar(db, id, status); 
