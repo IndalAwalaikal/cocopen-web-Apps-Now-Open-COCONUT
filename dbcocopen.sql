@@ -50,3 +50,28 @@ CREATE TABLE pendaftar (
     CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES users(id_user) ON DELETE SET NULL,
     INDEX idx_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE jadwal (
+    id_jadwal INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id_user) ON DELETE CASCADE,
+    pendaftar_id INT,
+    FOREIGN KEY (pendaftar_id) REFERENCES pendaftar(id_pendaftar) ON DELETE SET NULL,
+    tanggal DATE NOT NULL,
+    jam_mulai TIME NOT NULL,
+    jam_selesai TIME NOT NULL,
+    tempat VARCHAR(255) NOT NULL,
+    konfirmasi_jadwal ENUM('belum', 'dikonfirmasi', 'ditolak') DEFAULT 'belum',
+    catatan TEXT DEFAULT NULL,
+    pengajuan_perubahan BOOLEAN DEFAULT FALSE,
+    alasan_perubahan TEXT DEFAULT NULL,
+    tanggal_diajukan DATE NULL,
+    jam_mulai_diajukan TIME NULL,
+    jam_selesai_diajukan TIME NULL;
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id),
+    INDEX idx_pendaftar_id (pendaftar_id),
+    INDEX idx_tanggal (tanggal),
+    INDEX idx_konfirmasi (konfirmasi_jadwal)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
