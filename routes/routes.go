@@ -4,10 +4,9 @@ package routes
 import (
 	"database/sql"
 	"net/http"
-
 	"cocopen-backend/controllers"
 	"cocopen-backend/middleware"
-)
+	)
 
 func Setup(db *sql.DB) http.Handler {
 	mux := http.NewServeMux()
