@@ -1,2 +1,4 @@
-# .env
-# dbcocopen.sql
+# .gitignore
+.env
+*.env
+.env.local
