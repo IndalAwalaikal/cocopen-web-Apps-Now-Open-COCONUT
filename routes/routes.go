@@ -2,11 +2,11 @@
 package routes
 
 import (
-	"database/sql"
-	"net/http"
 	"cocopen-backend/controllers"
 	"cocopen-backend/middleware"
-	)
+	"database/sql"
+	"net/http"
+)
 
 func Setup(db *sql.DB) http.Handler {
 	mux := http.NewServeMux()
@@ -48,7 +48,7 @@ func Setup(db *sql.DB) http.Handler {
 		controllers.CreatePendaftar(db)(w, r)
 	})))
 
-	// 🔹 User: Lihat jadwal pribadi
+	// 🔹 User: Lihat SEMUA jadwal (pribadi + umum) → tidak perlu tahu jenisnya
 	mux.Handle("/jadwal/user", middleware.Auth(func(w http.ResponseWriter, r *http.Request) {
 		controllers.GetUserJadwalHandler(db)(w, r)
 	}))
@@ -82,23 +82,24 @@ func Setup(db *sql.DB) http.Handler {
 	})))
 
 	// 🔹 Jadwal - Admin
-    mux.Handle("/jadwal/delete", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
-    controllers.DeleteJadwalHandler(db)(w, r)
-    })))
+	mux.Handle("/jadwal/delete", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+		controllers.DeleteJadwalHandler(db)(w, r)
+	})))
 
 	mux.Handle("/jadwal/update", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
 		controllers.UpdateJadwalHandler(db)(w, r)
 	})))
 
-    mux.Handle("/jadwal/create", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/jadwal/create", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
 		controllers.CreateJadwalHandler(db)(w, r)
 	})))
 
-    mux.Handle("/jadwal/all", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/jadwal/all", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
 		controllers.GetAllJadwalHandler(db)(w, r)
 	})))
 
-	mux.Handle("/jadwal/", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+	// GET /jadwal?id=123
+	mux.Handle("/jadwal", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
 		controllers.GetJadwalByIDHandler(db)(w, r)
 	})))
 

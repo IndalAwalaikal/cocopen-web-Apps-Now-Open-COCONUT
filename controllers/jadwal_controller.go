@@ -4,68 +4,18 @@ package controllers
 import (
 	"cocopen-backend/dto"
 	"cocopen-backend/middleware"
-	"cocopen-backend/models"
 	"cocopen-backend/services"
 	"cocopen-backend/utils"
+	"cocopen-backend/models"
 	"database/sql"
-	"errors"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
 
-func CreateJadwalHandler(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			utils.Error(w, http.StatusMethodNotAllowed, "Metode tidak diizinkan")
-			return
-		}
-
-		claims, ok := r.Context().Value(middleware.UserContextKey).(*utils.Claims)
-		if !ok || claims.Role != "admin" {
-			utils.Error(w, http.StatusForbidden, "Akses ditolak")
-			return
-		}
-
-		var req dto.JadwalCreateRequest
-		if err := parseJadwalCreateRequest(r, &req); err != nil {
-			utils.Error(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		tanggal, err := time.Parse("2006-01-02", req.Tanggal)
-		if err != nil {
-			utils.Error(w, http.StatusBadRequest, "Format tanggal tidak valid")
-			return
-		}
-
-		jadwal := models.Jadwal{
-			UserID:             req.UserID,
-			PendaftarID:        req.PendaftarID,
-			Tanggal:            tanggal,
-			JamMulai:           req.JamMulai,
-			JamSelesai:         req.JamSelesai,
-			Tempat:             req.Tempat,
-			KonfirmasiJadwal:   "belum",
-			Catatan:            req.Catatan,
-			PengajuanPerubahan: false,
-			AlasanPerubahan:    nil,
-		}
-
-		if err := services.CreateJadwal(db, jadwal); err != nil {
-			utils.Error(w, http.StatusInternalServerError, "Gagal membuat jadwal")
-			return
-		}
-
-		utils.JSONResponse(w, http.StatusCreated, map[string]interface{}{
-			"success": true,
-			"message": "Jadwal berhasil dibuat",
-		})
-	}
-}
-
-func GetAllJadwalHandler(db *sql.DB) http.HandlerFunc {
+func GetUserJadwalHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			utils.Error(w, http.StatusMethodNotAllowed, "Hanya metode GET yang diizinkan")
@@ -73,101 +23,48 @@ func GetAllJadwalHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		claims, ok := r.Context().Value(middleware.UserContextKey).(*utils.Claims)
-		if !ok || claims.Role != "admin" {
-			utils.Error(w, http.StatusForbidden, "Akses ditolak")
+		if !ok {
+			utils.Error(w, http.StatusUnauthorized, "Akses ditolak")
 			return
 		}
 
-		rows, err := services.GetAllJadwal(db) // Gunakan fungsi yang sudah diperbaiki
+		pribadi, err := services.GetJadwalByUserID(db, claims.IDUser)
 		if err != nil {
-			utils.Error(w, http.StatusInternalServerError, "Gagal mengambil data jadwal")
+			utils.Error(w, http.StatusInternalServerError, "Gagal mengambil jadwal pribadi: "+err.Error())
 			return
 		}
-		defer rows.Close()
 
-		var result []dto.JadwalAdminResponse
+		umum, err := services.GetJadwalUmum(db)
+		if err != nil {
+			utils.Error(w, http.StatusInternalServerError, "Gagal mengambil jadwal umum: "+err.Error())
+			return
+		}
 
-		for rows.Next() {
-			var j models.Jadwal
-			var pendaftarID sql.NullInt64
-			var catatanStr, alasanStr sql.NullString
-			var tanggalD sql.NullTime
-			var jamMulaiD, jamSelesaiD sql.NullString
+		allJadwal := append(pribadi, umum...)
 
-			err := rows.Scan(
-				&j.IDJadwal,
-				&j.UserID,
-				&pendaftarID,
-				&j.Tanggal,
-				&j.JamMulai,
-				&j.JamSelesai,
-				&j.Tempat,
-				&j.KonfirmasiJadwal,
-				&catatanStr,
-				&j.PengajuanPerubahan,
-				&alasanStr,
-				&tanggalD,
-				&jamMulaiD,
-				&jamSelesaiD,
-				&j.CreatedAt,
-				&j.UpdatedAt,
-			)
-			if err != nil {
-				utils.Error(w, http.StatusInternalServerError, "Gagal membaca data jadwal")
-				return
+		sort.Slice(allJadwal, func(i, j int) bool {
+			if allJadwal[i].Tanggal == allJadwal[j].Tanggal {
+				return allJadwal[i].JamMulai < allJadwal[j].JamMulai
 			}
+			return allJadwal[i].Tanggal.Before(allJadwal[j].Tanggal)
+		})
 
-			var pendaftarIDPtr *int
-			if pendaftarID.Valid {
-				id := int(pendaftarID.Int64)
-				pendaftarIDPtr = &id
-			}
-
-			var catatanPtr *string
-			if catatanStr.Valid {
-				catatanPtr = &catatanStr.String
-			}
-
-			var alasanPtr *string
-			if alasanStr.Valid {
-				alasanPtr = &alasanStr.String
-			}
-
-			var tanggalDPtr *time.Time
-			if tanggalD.Valid {
-				tanggalDPtr = &tanggalD.Time
-			}
-
-			var jamMulaiDPtr *string
-			if jamMulaiD.Valid {
-				jamMulaiDPtr = &jamMulaiD.String
-			}
-
-			var jamSelesaiDPtr *string
-			if jamSelesaiD.Valid {
-				jamSelesaiDPtr = &jamSelesaiD.String
-			}
-
-			response := dto.JadwalAdminResponse{
-				IDJadwal:               j.IDJadwal,
-				UserID:                 j.UserID,
-				PendaftarID:            pendaftarIDPtr,
-				Tanggal:                j.Tanggal,
-				JamMulai:               j.JamMulai,
-				JamSelesai:             j.JamSelesai,
-				Tempat:                 j.Tempat,
-				KonfirmasiJadwal:       j.KonfirmasiJadwal,
-				Catatan:                catatanPtr,
-				PengajuanPerubahan:     j.PengajuanPerubahan,
-				AlasanPerubahan:        alasanPtr,
-				CreatedAt:              j.CreatedAt,
-				UpdatedAt:              j.UpdatedAt,
-				TanggalDiajukan:        tanggalDPtr,
-				JamMulaiDiajukan:       jamMulaiDPtr,
-				JamSelesaiDiajukan:     jamSelesaiDPtr,
-			}
-
-			result = append(result, response)
+		var result []dto.JadwalUserResponse
+		for _, j := range allJadwal {
+			result = append(result, dto.JadwalUserResponse{
+				IDJadwal:           j.IDJadwal,
+				Tanggal:            j.Tanggal,
+				JamMulai:           j.JamMulai,
+				JamSelesai:         j.JamSelesai,
+				Tempat:             j.Tempat,
+				KonfirmasiJadwal:   j.KonfirmasiJadwal,
+				Catatan:            j.Catatan,
+				PengajuanPerubahan: j.PengajuanPerubahan,
+				AlasanPerubahan:    j.AlasanPerubahan,
+				TanggalDiajukan:    j.TanggalDiajukan,
+				JamMulaiDiajukan:   j.JamMulaiDiajukan,
+				JamSelesaiDiajukan: j.JamSelesaiDiajukan,
+			})
 		}
 
 		utils.JSONResponse(w, http.StatusOK, result)
@@ -205,46 +102,35 @@ func GetJadwalByIDHandler(db *sql.DB) http.HandlerFunc {
 				utils.Error(w, http.StatusNotFound, "Jadwal tidak ditemukan")
 				return
 			}
-			utils.Error(w, http.StatusInternalServerError, "Gagal mengambil data jadwal")
+			utils.Error(w, http.StatusInternalServerError, "Gagal mengambil data jadwal: "+err.Error())
 			return
 		}
 
-		var pendaftarIDPtr *int
-		if jadwal.PendaftarID != nil {
-			pendaftarIDPtr = jadwal.PendaftarID
-		}
-
-		var catatanPtr *string
-		if jadwal.Catatan != nil {
-			catatanPtr = jadwal.Catatan
-		}
-
-		var alasanPtr *string
-		if jadwal.AlasanPerubahan != nil {
-			alasanPtr = jadwal.AlasanPerubahan
-		}
-
 		response := dto.JadwalAdminResponse{
-			IDJadwal:           jadwal.IDJadwal,
-			UserID:             jadwal.UserID,
-			PendaftarID:        pendaftarIDPtr,
-			Tanggal:            jadwal.Tanggal,
-			JamMulai:           jadwal.JamMulai,
-			JamSelesai:         jadwal.JamSelesai,
-			Tempat:             jadwal.Tempat,
-			KonfirmasiJadwal:   jadwal.KonfirmasiJadwal,
-			Catatan:            catatanPtr,
-			PengajuanPerubahan: jadwal.PengajuanPerubahan,
-			AlasanPerubahan:    alasanPtr,
-			CreatedAt:          jadwal.CreatedAt,
-			UpdatedAt:          jadwal.UpdatedAt,
+			IDJadwal:             jadwal.IDJadwal,
+			UserID:               jadwal.UserID,
+			PendaftarID:          jadwal.PendaftarID,
+			Tanggal:              jadwal.Tanggal,
+			JamMulai:             jadwal.JamMulai,
+			JamSelesai:           jadwal.JamSelesai,
+			Tempat:               jadwal.Tempat,
+			KonfirmasiJadwal:     jadwal.KonfirmasiJadwal,
+			Catatan:              jadwal.Catatan,
+			PengajuanPerubahan:   jadwal.PengajuanPerubahan,
+			AlasanPerubahan:      jadwal.AlasanPerubahan,
+			TanggalDiajukan:      jadwal.TanggalDiajukan,
+			JamMulaiDiajukan:     jadwal.JamMulaiDiajukan,
+			JamSelesaiDiajukan:   jadwal.JamSelesaiDiajukan,
+			JenisJadwal:          jadwal.JenisJadwal,
+			CreatedAt:            jadwal.CreatedAt,
+			UpdatedAt:            jadwal.UpdatedAt,
 		}
 
 		utils.JSONResponse(w, http.StatusOK, response)
 	}
 }
 
-func GetUserJadwalHandler(db *sql.DB) http.HandlerFunc {
+func GetAllJadwalHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			utils.Error(w, http.StatusMethodNotAllowed, "Hanya metode GET yang diizinkan")
@@ -252,91 +138,113 @@ func GetUserJadwalHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		claims, ok := r.Context().Value(middleware.UserContextKey).(*utils.Claims)
-		if !ok {
-			utils.Error(w, http.StatusUnauthorized, "Akses ditolak")
+		if !ok || claims.Role != "admin" {
+			utils.Error(w, http.StatusForbidden, "Akses ditolak")
 			return
 		}
 
-		rows, err := services.GetJadwalByUserID(db, claims.IDUser)
+		jadwals, err := services.GetAllJadwal(db)
 		if err != nil {
-			utils.Error(w, http.StatusInternalServerError, "Gagal mengambil jadwal Anda")
+			utils.Error(w, http.StatusInternalServerError, "Gagal mengambil data jadwal: "+err.Error())
 			return
 		}
-		defer rows.Close()
 
-		var result []dto.JadwalUserResponse
-
-		for rows.Next() {
-			var j models.Jadwal
-			var catatanStr, alasanStr sql.NullString
-			var tanggalD sql.NullTime
-			var jamMulaiD, jamSelesaiD sql.NullString
-
-			err := rows.Scan(
-				&j.IDJadwal,
-				&j.UserID,
-				&j.PendaftarID,
-				&j.Tanggal,
-				&j.JamMulai,
-				&j.JamSelesai,
-				&j.Tempat,
-				&j.KonfirmasiJadwal,
-				&catatanStr,
-				&j.PengajuanPerubahan,
-				&alasanStr,
-				&tanggalD,
-				&jamMulaiD,
-				&jamSelesaiD,
-				&j.CreatedAt,
-				&j.UpdatedAt,
-			)
-			if err != nil {
-				utils.Error(w, http.StatusInternalServerError, "Gagal membaca data jadwal")
-				return
-			}
-
-			var catatanPtr *string
-			if catatanStr.Valid {
-				catatanPtr = &catatanStr.String
-			}
-
-			var alasanPtr *string
-			if alasanStr.Valid {
-				alasanPtr = &alasanStr.String
-			}
-
-			var tanggalDPtr *time.Time
-			if tanggalD.Valid {
-				tanggalDPtr = &tanggalD.Time
-			}
-
-			var jamMulaiDPtr *string
-			if jamMulaiD.Valid {
-				jamMulaiDPtr = &jamMulaiD.String
-			}
-
-			var jamSelesaiDPtr *string
-			if jamSelesaiD.Valid {
-				jamSelesaiDPtr = &jamSelesaiD.String
-			}
-
-			result = append(result, dto.JadwalUserResponse{
-				IDJadwal:           j.IDJadwal,
-				Tanggal:            j.Tanggal,
-				JamMulai:           j.JamMulai,
-				JamSelesai:         j.JamSelesai,
-				Tempat:             j.Tempat,
-				KonfirmasiJadwal:   j.KonfirmasiJadwal,
-				Catatan:            catatanPtr,
-				PengajuanPerubahan: j.PengajuanPerubahan,
-				AlasanPerubahan:    alasanPtr,
-				TanggalDiajukan:    tanggalDPtr,
-				JamMulaiDiajukan:   jamMulaiDPtr,
-				JamSelesaiDiajukan: jamSelesaiDPtr,
+		var result []dto.JadwalAdminResponse
+		for _, j := range jadwals {
+			result = append(result, dto.JadwalAdminResponse{
+				IDJadwal:             j.IDJadwal,
+				UserID:               j.UserID,
+				PendaftarID:          j.PendaftarID,
+				Tanggal:              j.Tanggal,
+				JamMulai:             j.JamMulai,
+				JamSelesai:           j.JamSelesai,
+				Tempat:               j.Tempat,
+				KonfirmasiJadwal:     j.KonfirmasiJadwal,
+				Catatan:              j.Catatan,
+				PengajuanPerubahan:   j.PengajuanPerubahan,
+				AlasanPerubahan:      j.AlasanPerubahan,
+				TanggalDiajukan:      j.TanggalDiajukan,
+				JamMulaiDiajukan:     j.JamMulaiDiajukan,
+				JamSelesaiDiajukan:   j.JamSelesaiDiajukan,
+				JenisJadwal:          j.JenisJadwal,
+				CreatedAt:            j.CreatedAt,
+				UpdatedAt:            j.UpdatedAt,
 			})
 		}
 
 		utils.JSONResponse(w, http.StatusOK, result)
+	}
+}
+
+func CreateJadwalHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			utils.Error(w, http.StatusMethodNotAllowed, "Metode tidak diizinkan")
+			return
+		}
+
+		claims, ok := r.Context().Value(middleware.UserContextKey).(*utils.Claims)
+		if !ok || claims.Role != "admin" {
+			utils.Error(w, http.StatusForbidden, "Akses ditolak")
+			return
+		}
+
+		var req dto.JadwalCreateRequest
+		if err := utils.ParseAndValidate(r, &req); err != nil {
+			utils.Error(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		tanggal, err := time.Parse("2006-01-02", req.Tanggal)
+		if err != nil {
+			utils.Error(w, http.StatusBadRequest, "Format tanggal tidak valid")
+			return
+		}
+
+		jamMulai, err := time.Parse("15:04:05", req.JamMulai)
+		if err != nil {
+			utils.Error(w, http.StatusBadRequest, "Format jam_mulai tidak valid")
+			return
+		}
+
+		jamSelesai, err := time.Parse("15:04:05", req.JamSelesai)
+		if err != nil {
+			utils.Error(w, http.StatusBadRequest, "Format jam_selesai tidak valid")
+			return
+		}
+
+		if !jamSelesai.After(jamMulai) {
+			utils.Error(w, http.StatusBadRequest, "Jam selesai harus setelah jam mulai")
+			return
+		}
+
+		jadwal := models.Jadwal{
+			UserID:             claims.IDUser,
+			PendaftarID:        req.PendaftarID,
+			Tanggal:            tanggal,
+			JamMulai:           req.JamMulai,
+			JamSelesai:         req.JamSelesai,
+			Tempat:             req.Tempat,
+			KonfirmasiJadwal:   "belum",
+			Catatan:            req.Catatan,
+			PengajuanPerubahan: false,
+			AlasanPerubahan:    nil,
+			JenisJadwal:        "pribadi",
+		}
+
+		if req.JenisJadwal == "umum" {
+			jadwal.JenisJadwal = "umum"
+		}
+
+		if err := services.CreateJadwal(db, jadwal); err != nil {
+			utils.Error(w, http.StatusInternalServerError, "Gagal membuat jadwal: "+err.Error())
+			return
+		}
+
+		utils.JSONResponse(w, http.StatusCreated, map[string]interface{}{
+			"success": true,
+			"message": "Jadwal berhasil dibuat",
+		})
 	}
 }
 
@@ -353,15 +261,21 @@ func UpdateJadwalHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		var req dto.JadwalUpdateRequest
-		if err := utils.ParseJSON(r, &req); err != nil {
-			utils.Error(w, http.StatusBadRequest, "Data tidak valid")
+		idStr := r.URL.Query().Get("id")
+		if idStr == "" {
+			utils.Error(w, http.StatusBadRequest, "Parameter id wajib diisi")
 			return
 		}
 
-		idJadwal := req.IDJadwal
-		if idJadwal == 0 {
+		idJadwal, err := strconv.Atoi(idStr)
+		if err != nil {
 			utils.Error(w, http.StatusBadRequest, "ID jadwal tidak valid")
+			return
+		}
+
+		var req dto.JadwalUpdateRequest
+		if err := utils.ParseAndValidate(r, &req); err != nil {
+			utils.Error(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -371,7 +285,7 @@ func UpdateJadwalHandler(db *sql.DB) http.HandlerFunc {
 				utils.Error(w, http.StatusNotFound, "Jadwal tidak ditemukan")
 				return
 			}
-			utils.Error(w, http.StatusInternalServerError, "Gagal mengambil data jadwal")
+			utils.Error(w, http.StatusInternalServerError, "Gagal mengambil data jadwal: "+err.Error())
 			return
 		}
 
@@ -406,9 +320,16 @@ func UpdateJadwalHandler(db *sql.DB) http.HandlerFunc {
 		if req.Catatan != nil {
 			existing.Catatan = req.Catatan
 		}
+		if req.JenisJadwal != nil {
+			if *req.JenisJadwal != "pribadi" && *req.JenisJadwal != "umum" {
+				utils.Error(w, http.StatusBadRequest, "Jenis jadwal harus 'pribadi' atau 'umum'")
+				return
+			}
+			existing.JenisJadwal = *req.JenisJadwal
+		}
 
 		if err := services.UpdateJadwal(db, existing); err != nil {
-			utils.Error(w, http.StatusInternalServerError, "Gagal memperbarui jadwal")
+			utils.Error(w, http.StatusInternalServerError, "Gagal memperbarui jadwal: "+err.Error())
 			return
 		}
 
@@ -420,68 +341,78 @@ func UpdateJadwalHandler(db *sql.DB) http.HandlerFunc {
 }
 
 func AjukanPerubahanJadwalHandler(db *sql.DB) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        if r.Method != http.MethodPost {
-            utils.Error(w, http.StatusMethodNotAllowed, "Metode tidak diizinkan")
-            return
-        }
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			utils.Error(w, http.StatusMethodNotAllowed, "Metode tidak diizinkan")
+			return
+		}
 
-        claims, ok := r.Context().Value(middleware.UserContextKey).(*utils.Claims)
-        if !ok || claims.Role != "user" {
-            utils.Error(w, http.StatusForbidden, "Akses ditolak")
-            return
-        }
+		claims, ok := r.Context().Value(middleware.UserContextKey).(*utils.Claims)
+		if !ok || claims.Role != "user" {
+			utils.Error(w, http.StatusForbidden, "Akses ditolak")
+			return
+		}
 
-        var req dto.JadwalAjukanPerubahanRequest
-        if err := utils.ParseJSON(r, &req); err != nil {
-            utils.Error(w, http.StatusBadRequest, "Data tidak valid")
-            return
-        }
+		var req dto.JadwalAjukanPerubahanRequest
+		if err := utils.ParseAndValidate(r, &req); err != nil {
+			utils.Error(w, http.StatusBadRequest, err.Error())
+			return
+		}
 
-        if len(strings.TrimSpace(req.AlasanPerubahan)) < 10 {
-            utils.Error(w, http.StatusBadRequest, "Alasan perubahan minimal 10 karakter")
-            return
-        }
+		if len(strings.TrimSpace(req.AlasanPerubahan)) < 10 {
+			utils.Error(w, http.StatusBadRequest, "Alasan perubahan minimal 10 karakter")
+			return
+		}
 
-        jadwal, err := services.GetJadwalByID(db, req.IDJadwal)
-        if err != nil {
-            if err == sql.ErrNoRows {
-                utils.Error(w, http.StatusNotFound, "Jadwal tidak ditemukan")
-                return
-            }
-            utils.Error(w, http.StatusInternalServerError, "Gagal mengambil data jadwal")
-            return
-        }
+		jadwal, err := services.GetJadwalByID(db, req.IDJadwal)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				utils.Error(w, http.StatusNotFound, "Jadwal tidak ditemukan")
+				return
+			}
+			utils.Error(w, http.StatusInternalServerError, "Gagal mengambil data jadwal: "+err.Error())
+			return
+		}
 
-        if jadwal.UserID != claims.IDUser {
-            utils.Error(w, http.StatusForbidden, "Bukan jadwal Anda")
-            return
-        }
+		if jadwal.UserID != claims.IDUser {
+			utils.Error(w, http.StatusForbidden, "Bukan jadwal Anda")
+			return
+		}
 
-        if jadwal.PengajuanPerubahan {
-            utils.Error(w, http.StatusBadRequest, "Sudah ada pengajuan perubahan")
-            return
-        }
+		if jadwal.PengajuanPerubahan {
+			utils.Error(w, http.StatusBadRequest, "Sudah ada pengajuan perubahan aktif")
+			return
+		}
 
-        err = services.UpdatePengajuanPerubahan(
-            db,
-            req.IDJadwal,
-            true,
-            &req.AlasanPerubahan,
-            req.TanggalDiajukan,
-            req.JamMulaiDiajukan,
-            req.JamSelesaiDiajukan,
-        )
-        if err != nil {
-            utils.Error(w, http.StatusInternalServerError, "Gagal ajukan perubahan jadwal")
-            return
-        }
+		var tanggalD *time.Time
+		if req.TanggalDiajukan != nil {
+			t, err := time.Parse("2006-01-02", *req.TanggalDiajukan)
+			if err != nil {
+				utils.Error(w, http.StatusBadRequest, "Format tanggal_diajukan tidak valid")
+				return
+			}
+			tanggalD = &t
+		}
 
-        utils.JSONResponse(w, http.StatusOK, map[string]interface{}{
-            "success": true,
-            "message": "Pengajuan perubahan jadwal berhasil dikirim",
-        })
-    }
+		err = services.UpdatePengajuanPerubahan(
+			db,
+			req.IDJadwal,
+			true,
+			&req.AlasanPerubahan,
+			tanggalD,
+			req.JamMulaiDiajukan,
+			req.JamSelesaiDiajukan,
+		)
+		if err != nil {
+			utils.Error(w, http.StatusInternalServerError, "Gagal ajukan perubahan jadwal: "+err.Error())
+			return
+		}
+
+		utils.JSONResponse(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"message": "Pengajuan perubahan jadwal berhasil dikirim",
+		})
+	}
 }
 
 func CancelPengajuanPerubahanHandler(db *sql.DB) http.HandlerFunc {
@@ -515,7 +446,7 @@ func CancelPengajuanPerubahanHandler(db *sql.DB) http.HandlerFunc {
 				utils.Error(w, http.StatusNotFound, "Jadwal tidak ditemukan")
 				return
 			}
-			utils.Error(w, http.StatusInternalServerError, "Gagal mengambil data jadwal")
+			utils.Error(w, http.StatusInternalServerError, "Gagal mengambil data jadwal: "+err.Error())
 			return
 		}
 
@@ -529,17 +460,9 @@ func CancelPengajuanPerubahanHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		err = services.UpdatePengajuanPerubahan(
-			db,
-			idJadwal,
-			false,
-			nil,
-			nil, 
-			nil, 
-			nil, 
-		)
+		err = services.UpdatePengajuanPerubahan(db, idJadwal, false, nil, nil, nil, nil)
 		if err != nil {
-			utils.Error(w, http.StatusInternalServerError, "Gagal batalkan pengajuan")
+			utils.Error(w, http.StatusInternalServerError, "Gagal batalkan pengajuan: "+err.Error())
 			return
 		}
 
@@ -551,78 +474,48 @@ func CancelPengajuanPerubahanHandler(db *sql.DB) http.HandlerFunc {
 }
 
 func DeleteJadwalHandler(db *sql.DB) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        if r.Method != http.MethodDelete {
-            utils.Error(w, http.StatusMethodNotAllowed, "Metode tidak diizinkan")
-            return
-        }
-
-        claims, ok := r.Context().Value(middleware.UserContextKey).(*utils.Claims)
-        if !ok || claims.Role != "admin" {
-            utils.Error(w, http.StatusForbidden, "Akses ditolak")
-            return
-        }
-
-        var req dto.DeleteJadwalRequest
-		if err := utils.ParseJSON(r, &req); err != nil {
-			utils.Error(w, http.StatusBadRequest, "Body JSON tidak valid: "+err.Error())
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			utils.Error(w, http.StatusMethodNotAllowed, "Metode tidak diizinkan")
 			return
 		}
 
-        if req.IDJadwal == 0 {
-            utils.Error(w, http.StatusBadRequest, "id_jadwal wajib diisi")
-            return
-        }
+		claims, ok := r.Context().Value(middleware.UserContextKey).(*utils.Claims)
+		if !ok || claims.Role != "admin" {
+			utils.Error(w, http.StatusForbidden, "Akses ditolak")
+			return
+		}
 
-        _, err := services.GetJadwalByID(db, req.IDJadwal)
-        if err != nil {
-            if err == sql.ErrNoRows {
-                utils.Error(w, http.StatusNotFound, "Jadwal tidak ditemukan")
-                return
-            }
-            utils.Error(w, http.StatusInternalServerError, "Gagal memeriksa jadwal")
-            return
-        }
+		idStr := r.URL.Query().Get("id")
+		if idStr == "" {
+			utils.Error(w, http.StatusBadRequest, "Parameter id wajib diisi")
+			return
+		}
 
-        if err := services.DeleteJadwal(db, req.IDJadwal); err != nil {
-            utils.Error(w, http.StatusInternalServerError, "Gagal menghapus jadwal")
-            return
-        }
+		idJadwal, err := strconv.Atoi(idStr)
+		if err != nil {
+			utils.Error(w, http.StatusBadRequest, "ID jadwal tidak valid")
+			return
+		}
 
-        utils.JSONResponse(w, http.StatusOK, map[string]interface{}{
-            "success": true,
-            "message": "Jadwal berhasil dihapus",
-        })
-    }
-}
+		_, err = services.GetJadwalByID(db, idJadwal)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				utils.Error(w, http.StatusNotFound, "Jadwal tidak ditemukan")
+				return
+			}
+			utils.Error(w, http.StatusInternalServerError, "Gagal memeriksa jadwal: "+err.Error())
+			return
+		}
 
+		if err := services.DeleteJadwal(db, idJadwal); err != nil {
+			utils.Error(w, http.StatusInternalServerError, "Gagal menghapus jadwal: "+err.Error())
+			return
+		}
 
-
-func parseJadwalCreateRequest(r *http.Request, req *dto.JadwalCreateRequest) error {
-	if err := utils.ParseJSON(r, req); err != nil {
-		return err
+		utils.JSONResponse(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"message": "Jadwal berhasil dihapus",
+		})
 	}
-
-	if req.UserID == 0 {
-		return errors.New("user_id wajib diisi dan harus angka")
-	}
-	if req.Tanggal == "" {
-		return errors.New("tanggal wajib diisi")
-	}
-	if req.JamMulai == "" {
-		return errors.New("jam_mulai wajib diisi")
-	}
-	if req.JamSelesai == "" {
-		return errors.New("jam_selesai wajib diisi")
-	}
-	if req.Tempat == "" {
-		return errors.New("tempat wajib diisi")
-	}
-
-	return nil
-}
-
-// parseJadwalUpdateRequest: Parse JSON body untuk update
-func parseJadwalUpdateRequest(r *http.Request, req *dto.JadwalUpdateRequest) error {
-	return utils.ParseJSON(r, req)
 }

@@ -61,6 +61,7 @@ CREATE TABLE jadwal (
     jam_mulai TIME NOT NULL,
     jam_selesai TIME NOT NULL,
     tempat VARCHAR(255) NOT NULL,
+    jenis_jadwal ENUM('pribadi', 'umum') DEFAULT 'pribadi',
     konfirmasi_jadwal ENUM('belum', 'dikonfirmasi', 'ditolak') DEFAULT 'belum',
     catatan TEXT DEFAULT NULL,
     pengajuan_perubahan BOOLEAN DEFAULT FALSE,

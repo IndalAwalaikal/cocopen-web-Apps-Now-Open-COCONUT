@@ -84,3 +84,11 @@ func IsValidUsername(username string) bool {
 
     return true
 }
+
+type ValidationError struct {
+	Msg string
+}
+
+func (e ValidationError) Error() string {
+	return e.Msg
+}

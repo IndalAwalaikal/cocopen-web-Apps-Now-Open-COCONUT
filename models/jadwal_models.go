@@ -23,6 +23,8 @@ type Jadwal struct {
     CreatedAt          time.Time  `json:"created_at"`
     UpdatedAt          time.Time  `json:"updated_at"`
 
+    JenisJadwal        string     `json:"jenis_jadwal"`
+
     // Relasi (opsional)
     User      *User      `json:"user,omitempty"`
     Pendaftar *Pendaftar `json:"pendaftar,omitempty"`
