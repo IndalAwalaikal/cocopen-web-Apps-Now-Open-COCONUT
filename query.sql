@@ -135,3 +135,13 @@ CREATE TABLE jawaban_user (
     FOREIGN KEY (id_soal) REFERENCES soal_test(id_soal),
     UNIQUE KEY unique_jawaban_soal (id_hasil, id_soal)
 );
+
+CREATE TABLE pengumuman (
+    id_pengumuman INT AUTO_INCREMENT PRIMARY KEY,
+    judul VARCHAR(255) NOT NULL,
+    isi TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_created_at (created_at)
+);

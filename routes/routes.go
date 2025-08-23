@@ -71,6 +71,11 @@ func Setup(db *sql.DB) http.Handler {
 		controllers.SubmitJawabanHandler(db)(w, r)
 	})))
 
+	// 🔹 Pengumuman - User: Lihat semua
+	mux.Handle("/pengumuman", middleware.Auth(func(w http.ResponseWriter, r *http.Request) {
+    controllers.GetPengumumanHandler(db)(w, r)
+	}))
+
 	// === Protected Routes - Admin Role ===
 	// Pendaftar
 	mux.Handle("/pendaftar/all", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
@@ -125,5 +130,17 @@ func Setup(db *sql.DB) http.Handler {
 		controllers.GetAllHasilTesHandler(db)(w, r)
 	})))
 
+	// 🔹 Pengumuman 
+	mux.Handle("/pengumuman/create", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+    	controllers.CreatePengumumanHandler(db)(w, r)
+	})))
+
+	mux.Handle("/pengumuman/update", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+    	controllers.UpdatePengumumanHandler(db)(w, r)
+	})))
+
+	mux.Handle("/pengumuman/delete", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+    	controllers.DeletePengumumanHandler(db)(w, r)
+	})))
 	return mux
 }
