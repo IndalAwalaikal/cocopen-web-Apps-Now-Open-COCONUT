@@ -20,6 +20,8 @@ func main() {
     db := config.ConnectDB()
     defer db.Close()
 
+    config.StartCleanupJob(db)
+
     mux := routes.Setup(db)
 
     handler := middleware.Recovery(middleware.Cors(mux))

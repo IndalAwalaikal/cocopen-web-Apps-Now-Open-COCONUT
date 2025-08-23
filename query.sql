@@ -76,3 +76,6 @@ CREATE TABLE jadwal (
     INDEX idx_tanggal (tanggal),
     INDEX idx_konfirmasi (konfirmasi_jadwal)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+root:LsCMppNyBvMVaDrilcsXgEHvYOccZDYN@tcp(turntable.proxy.rlwy.net:22858)/railway?parseTime=true&loc=Local

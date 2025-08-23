@@ -2,6 +2,7 @@ package services
 
 import (
     "database/sql"
+    "time"
 )
 
 func Register(db *sql.DB, username, email, passwordHash, role string) (int, error) {
@@ -38,4 +39,13 @@ func GetUserByEmail(db *sql.DB, email string) (int, error) {
     var id int
     err := db.QueryRow("SELECT id_user FROM users WHERE email = ?", email).Scan(&id)
     return id, err
+}
+
+func DeleteUnverifiedUsersBefore(db *sql.DB, cutoff time.Time) error {
+    _, err := db.Exec(`
+        DELETE FROM users 
+        WHERE is_verified = FALSE 
+          AND created_at < ?
+    `, cutoff)
+    return err
 }
