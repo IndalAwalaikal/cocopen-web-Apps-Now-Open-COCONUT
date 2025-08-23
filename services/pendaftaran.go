@@ -33,6 +33,36 @@ func CreatePendaftar(db *sql.DB, p models.Pendaftar) error {
 
     return err
 }
+
+func GetLatestPendaftarByUserID(db *sql.DB, userID int) (*models.Pendaftar, error) {
+    var p models.Pendaftar
+    query := `
+        SELECT 
+            id_pendaftar, nama_lengkap, asal_kampus, prodi, semester, no_wa, domisili,
+            alamat_sekarang, tinggal_dengan, alasan_masuk, pengetahuan_coconut,
+            foto_path, created_at, updated_at, status, user_id
+        FROM pendaftar
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT 1
+    `
+    err := db.QueryRow(query, userID).Scan(
+        &p.IDPendaftar, &p.NamaLengkap, &p.AsalKampus, &p.Prodi, &p.Semester,
+        &p.NoWA, &p.Domisili, &p.AlamatSekarang, &p.TinggalDengan,
+        &p.AlasanMasuk, &p.PengetahuanCoconut, &p.FotoPath,
+        &p.CreatedAt, &p.UpdatedAt, &p.Status, &p.UserID,
+    )
+
+    if err == sql.ErrNoRows {
+        return nil, nil
+    }
+    if err != nil {
+        return nil, err
+    }
+
+    return &p, nil
+}
+
 func GetAllPendaftar(db *sql.DB) (*sql.Rows, error) {
     return db.Query(
         "SELECT id_pendaftar, nama_lengkap, asal_kampus, prodi, semester, no_wa, domisili, alamat_sekarang, tinggal_dengan, alasan_masuk, pengetahuan_coconut, foto_path, created_at, updated_at, status FROM pendaftar ORDER BY created_at DESC",

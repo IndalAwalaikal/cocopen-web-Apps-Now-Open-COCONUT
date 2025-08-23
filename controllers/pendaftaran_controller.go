@@ -7,7 +7,7 @@ import (
 	"cocopen-backend/utils"
 	"cocopen-backend/middleware"
 	"database/sql"
-	"fmt"
+	"time"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -72,6 +72,28 @@ func CreatePendaftar(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		latest, err := services.GetLatestPendaftarByUserID(db, claims.IDUser)
+        if err != nil {
+            utils.Error(w, http.StatusInternalServerError, "Gagal memeriksa riwayat pendaftaran")
+            return
+        }
+
+        const duaBulan = 90 * 24 * time.Hour
+
+        if latest != nil {
+            now := time.Now()
+            selisih := now.Sub(latest.CreatedAt)
+
+            if selisih < duaBulan {
+                hariSisa := int((duaBulan - selisih).Hours()/24) + 1
+                if hariSisa < 1 {
+                    hariSisa = 1
+                }
+                utils.Error(w, http.StatusTooEarly, "Anda baru bisa mendaftar kembali dalam " + strconv.Itoa(hariSisa) + " hari (batas 3 bulan antar pendaftaran)")
+                return
+            }
+        }
+
 		fotoName, err := utils.UploadFoto(file, header, utils.FotoPendaftarPath)
 		if err != nil {
 			utils.Error(w, http.StatusInternalServerError, "Gagal mengunggah foto")
@@ -103,7 +125,7 @@ func CreatePendaftar(db *sql.DB) http.HandlerFunc {
 			"success": true,
 			"message": "Pendaftar berhasil dibuat",
 			"data": map[string]string{
-				"foto_url": fmt.Sprintf("/uploads/foto_pendaftar/%s", fotoName),
+				"foto_url": "/uploads/foto_pendaftar/" + fotoName,
 			},
 		})
 	}
