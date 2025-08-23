@@ -49,10 +49,10 @@ func SendResetPasswordEmail(toEmail, token string) error {
 
 func SendVerificationEmail(toEmail, token string) error {
     SMTPHost := os.Getenv("SMTP_HOST")
-    SMTPPort := os.Getenv("SMTP_PORT")
-    EmailSender := os.Getenv("EMAIL_SENDER")
-    EmailPassword := os.Getenv("EMAIL_PASSWORD")
-    FrontendURL := os.Getenv("FRONTEND_URL")
+	SMTPPort := os.Getenv("SMTP_PORT")
+	EmailSender := os.Getenv("SMTP_USER")
+	EmailPassword := os.Getenv("SMTP_PASS")
+	FrontendURL := os.Getenv("FRONTEND_URL")
 
     verificationLink := fmt.Sprintf("%s/verify?token=%s", FrontendURL, token)
 
