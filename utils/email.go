@@ -10,8 +10,8 @@ import (
 func SendResetPasswordEmail(toEmail, token string) error {
 	SMTPHost := os.Getenv("SMTP_HOST")
 	SMTPPort := os.Getenv("SMTP_PORT")
-	EmailSender := os.Getenv("EMAIL_SENDER")
-	EmailPassword := os.Getenv("EMAIL_PASSWORD")
+	EmailSender := os.Getenv("SMTP_USER")
+	EmailPassword := os.Getenv("SMTP_PASS")
 	FrontendURL := os.Getenv("FRONTEND_URL")
 
 	resetLink := fmt.Sprintf("%s/reset-password?token=%s", FrontendURL, token)
