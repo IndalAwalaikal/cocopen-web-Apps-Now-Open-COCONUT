@@ -45,6 +45,43 @@ LOCK TABLES `email_verification_tokens` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `hasil_test`
+--
+
+DROP TABLE IF EXISTS `hasil_test`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `hasil_test` (
+  `id_hasil` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `pendaftar_id` int(11) NOT NULL,
+  `id_test` int(11) NOT NULL,
+  `skor_benar` int(11) NOT NULL DEFAULT 0,
+  `skor_salah` int(11) NOT NULL DEFAULT 0,
+  `nilai` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `waktu_mulai` timestamp NOT NULL DEFAULT current_timestamp(),
+  `waktu_selesai` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `durasi_menit` int(11) GENERATED ALWAYS AS (timestampdiff(MINUTE,`waktu_mulai`,`waktu_selesai`)) STORED,
+  PRIMARY KEY (`id_hasil`),
+  UNIQUE KEY `unique_user_per_test` (`user_id`,`id_test`),
+  KEY `pendaftar_id` (`pendaftar_id`),
+  KEY `id_test` (`id_test`),
+  CONSTRAINT `hasil_test_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id_user`),
+  CONSTRAINT `hasil_test_ibfk_2` FOREIGN KEY (`pendaftar_id`) REFERENCES `pendaftar` (`id_pendaftar`),
+  CONSTRAINT `hasil_test_ibfk_3` FOREIGN KEY (`id_test`) REFERENCES `test` (`id_test`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `hasil_test`
+--
+
+LOCK TABLES `hasil_test` WRITE;
+/*!40000 ALTER TABLE `hasil_test` DISABLE KEYS */;
+/*!40000 ALTER TABLE `hasil_test` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `jadwal`
 --
 
@@ -87,6 +124,36 @@ LOCK TABLES `jadwal` WRITE;
 /*!40000 ALTER TABLE `jadwal` DISABLE KEYS */;
 INSERT INTO `jadwal` VALUES (4,19,NULL,'2025-04-20','14:00:00','15:00:00','Ruang Meeting 2','dikonfirmasi','Wawancara lanjutan',0,NULL,'2025-08-21 02:59:06','2025-08-21 03:04:12',NULL,NULL,NULL,'umum'),(5,19,3,'2025-04-15','09:00:00','10:30:00','Ruang Wawancara A','belum','Bawa dokumen asli',0,NULL,'2025-08-21 21:48:12','2025-08-21 21:48:12',NULL,NULL,NULL,'pribadi');
 /*!40000 ALTER TABLE `jadwal` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `jawaban_user`
+--
+
+DROP TABLE IF EXISTS `jawaban_user`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `jawaban_user` (
+  `id_jawaban` int(11) NOT NULL AUTO_INCREMENT,
+  `id_hasil` int(11) NOT NULL,
+  `id_soal` int(11) NOT NULL,
+  `jawaban_user` char(1) NOT NULL CHECK (`jawaban_user` in ('A','B','C','D')),
+  `is_benar` tinyint(1) NOT NULL,
+  PRIMARY KEY (`id_jawaban`),
+  UNIQUE KEY `unique_jawaban_soal` (`id_hasil`,`id_soal`),
+  KEY `id_soal` (`id_soal`),
+  CONSTRAINT `jawaban_user_ibfk_1` FOREIGN KEY (`id_hasil`) REFERENCES `hasil_test` (`id_hasil`) ON DELETE CASCADE,
+  CONSTRAINT `jawaban_user_ibfk_2` FOREIGN KEY (`id_soal`) REFERENCES `soal_test` (`id_soal`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `jawaban_user`
+--
+
+LOCK TABLES `jawaban_user` WRITE;
+/*!40000 ALTER TABLE `jawaban_user` DISABLE KEYS */;
+/*!40000 ALTER TABLE `jawaban_user` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -159,6 +226,68 @@ INSERT INTO `pendaftar` VALUES (3,'morgan','unm','informatika','3','085757106358
 UNLOCK TABLES;
 
 --
+-- Table structure for table `soal_test`
+--
+
+DROP TABLE IF EXISTS `soal_test`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `soal_test` (
+  `id_soal` int(11) NOT NULL AUTO_INCREMENT,
+  `nomor` int(11) NOT NULL,
+  `pertanyaan` text NOT NULL,
+  `pilihan_a` text NOT NULL,
+  `pilihan_b` text NOT NULL,
+  `pilihan_c` text NOT NULL,
+  `pilihan_d` text NOT NULL,
+  `jawaban_benar` char(1) NOT NULL CHECK (`jawaban_benar` in ('A','B','C','D')),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_soal`),
+  UNIQUE KEY `unique_nomor` (`nomor`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `soal_test`
+--
+
+LOCK TABLES `soal_test` WRITE;
+/*!40000 ALTER TABLE `soal_test` DISABLE KEYS */;
+/*!40000 ALTER TABLE `soal_test` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `test`
+--
+
+DROP TABLE IF EXISTS `test`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `test` (
+  `id_test` int(11) NOT NULL AUTO_INCREMENT,
+  `judul` varchar(255) NOT NULL DEFAULT 'Tes Seleksi',
+  `deskripsi` text DEFAULT NULL,
+  `durasi_menit` int(11) NOT NULL DEFAULT 30,
+  `waktu_mulai` timestamp NULL DEFAULT NULL,
+  `waktu_selesai` timestamp NULL DEFAULT NULL,
+  `aktif` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_test`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `test`
+--
+
+LOCK TABLES `test` WRITE;
+/*!40000 ALTER TABLE `test` DISABLE KEYS */;
+/*!40000 ALTER TABLE `test` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `users`
 --
 
@@ -188,7 +317,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (7,'morgan','$2a$10$2pK7IwNmNHYV4jxlCD1I7O4d8bF8DiJKGfdndf4SM2Mq65R3yKIV2','user','2025-08-06 05:47:04','2025-08-15 17:02:12','indalawalaikal@gmail.com',0,'morgan','default.jpg'),(18,'fajrul','$2a$10$pNuQ2C9qgdiEtFGHFZml/eZjKIEwxoNmOZ2gENSv2e3Pi0kEnz7Um','user','2025-08-08 17:33:12','2025-08-15 17:02:12','indalawalaikal0055@gmail.com',1,'fajrul','default.jpg'),(19,'admin1','$2a$12$8UjwK9AY/b.9Q3F5l1BafOyO0V7KU5NAncg1OBuXbp.MG6U3H6Jmy','admin','2025-08-08 17:36:01','2025-08-15 17:02:12','',1,'admin1','default.jpg'),(27,'inferorum','$2a$10$HYkN4yHuCUmtNRNH3VhMs.8.0bTMYc.d8ztaYYdoMRNnR648Tjyfu','user','2025-08-11 13:10:18','2025-08-15 17:02:12','inferorum@gmail.com',1,'inferorum','default.jpg'),(33,'indal','$2a$10$kYuDwjAHoVhF0ytRogTz2uvDaxRY9lkOjMo80lC7/iIhVTH5J07OW','user','2025-08-15 17:56:06','2025-08-15 22:06:49','indalawalaikal05@gmail.com',1,'indal awaluddin','1755295609599036122.png'),(34,'nopal','$2a$10$YR1RZxTeuTP.UGD4A7.DUekaSpeYY9pJaN67G6WLo16dSxzxAGQPi','user','2025-08-17 13:37:13','2025-08-17 13:37:58','ngondokgaming@gmail.com',1,'nopal','default.jpg');
+INSERT INTO `users` VALUES (7,'morgan','$2a$10$2pK7IwNmNHYV4jxlCD1I7O4d8bF8DiJKGfdndf4SM2Mq65R3yKIV2','user','2025-08-06 05:47:04','2025-08-23 09:51:05','indalawalaikal@gmail.com',1,'morgan','default.jpg'),(18,'fajrul','$2a$10$pNuQ2C9qgdiEtFGHFZml/eZjKIEwxoNmOZ2gENSv2e3Pi0kEnz7Um','user','2025-08-08 17:33:12','2025-08-23 09:51:38','indalawalaikal0055@gmail.com',0,'fajrul','default.jpg'),(19,'admin1','$2a$12$8UjwK9AY/b.9Q3F5l1BafOyO0V7KU5NAncg1OBuXbp.MG6U3H6Jmy','admin','2025-08-08 17:36:01','2025-08-15 17:02:12','',1,'admin1','default.jpg'),(27,'inferorum','$2a$10$HYkN4yHuCUmtNRNH3VhMs.8.0bTMYc.d8ztaYYdoMRNnR648Tjyfu','user','2025-08-11 13:10:18','2025-08-23 09:51:49','inferorum@gmail.com',0,'inferorum','default.jpg'),(33,'indal','$2a$10$kYuDwjAHoVhF0ytRogTz2uvDaxRY9lkOjMo80lC7/iIhVTH5J07OW','user','2025-08-15 17:56:06','2025-08-15 22:06:49','indalawalaikal05@gmail.com',1,'indal awaluddin','1755295609599036122.png'),(34,'nopal','$2a$10$YR1RZxTeuTP.UGD4A7.DUekaSpeYY9pJaN67G6WLo16dSxzxAGQPi','user','2025-08-17 13:37:13','2025-08-17 13:37:58','ngondokgaming@gmail.com',1,'nopal','default.jpg');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -201,4 +330,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-08-23 17:01:08
+-- Dump completed on 2025-08-24  2:52:45

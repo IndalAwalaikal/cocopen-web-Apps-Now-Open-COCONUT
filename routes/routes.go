@@ -40,28 +40,36 @@ func Setup(db *sql.DB) http.Handler {
 		controllers.GetProfile(db)(w, r)
 	}))
 
-	mux.Handle("/profile/update", middleware.Auth(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/profile/update", middleware.Auth(middleware.Role("user")(func(w http.ResponseWriter, r *http.Request) {
 		controllers.UpdateProfile(db)(w, r)
-	}))
+	})))
 
 	mux.Handle("/pendaftar/create", middleware.Auth(middleware.Role("user")(func(w http.ResponseWriter, r *http.Request) {
 		controllers.CreatePendaftar(db)(w, r)
 	})))
 
 	// 🔹 User: Lihat SEMUA jadwal (pribadi + umum) → tidak perlu tahu jenisnya
-	mux.Handle("/jadwal/user", middleware.Auth(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/jadwal/user", middleware.Auth(middleware.Role("user")(func(w http.ResponseWriter, r *http.Request) {
 		controllers.GetUserJadwalHandler(db)(w, r)
-	}))
+	})))
 
 	// 🔹 User: Ajukan perubahan jadwal
-	mux.Handle("/jadwal/ajukan", middleware.Auth(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/jadwal/ajukan", middleware.Auth(middleware.Role("user")(func(w http.ResponseWriter, r *http.Request) {
 		controllers.AjukanPerubahanJadwalHandler(db)(w, r)
-	}))
+	})))
 
 	// 🔹 User: Batalkan pengajuan perubahan
-	mux.Handle("/jadwal/cancel-perubahan", middleware.Auth(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/jadwal/cancel-perubahan", middleware.Auth(middleware.Role("user")(func(w http.ResponseWriter, r *http.Request) {
 		controllers.CancelPengajuanPerubahanHandler(db)(w, r)
-	}))
+	})))
+
+	// 🔹 Test - User
+	mux.Handle("/test/soal", middleware.Auth(middleware.Role("user")(func(w http.ResponseWriter, r *http.Request) {
+		controllers.GetUserSoalHandler(db)(w, r)
+	})))
+	mux.Handle("/test/submit", middleware.Auth(middleware.Role("user")(func(w http.ResponseWriter, r *http.Request) {
+		controllers.SubmitJawabanHandler(db)(w, r)
+	})))
 
 	// === Protected Routes - Admin Role ===
 	// Pendaftar
@@ -101,6 +109,20 @@ func Setup(db *sql.DB) http.Handler {
 	// GET /jadwal?id=123
 	mux.Handle("/jadwal", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
 		controllers.GetJadwalByIDHandler(db)(w, r)
+	})))
+
+	// 🔹 Test - Admin (tanpa /admin)
+	mux.Handle("/test/soal/create", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+		controllers.CreateSoalHandler(db)(w, r)
+	})))
+	mux.Handle("/test/soal/update", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+		controllers.UpdateSoalHandler(db)(w, r)
+	})))
+	mux.Handle("/test/soal/delete", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+		controllers.DeleteSoalHandler(db)(w, r)
+	})))
+	mux.Handle("/test/hasil", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+		controllers.GetAllHasilTesHandler(db)(w, r)
 	})))
 
 	return mux
