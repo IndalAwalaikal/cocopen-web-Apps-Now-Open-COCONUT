@@ -4,9 +4,9 @@ package controllers
 import (
 	"cocopen-backend/dto"
 	"cocopen-backend/middleware"
+	"cocopen-backend/models"
 	"cocopen-backend/services"
 	"cocopen-backend/utils"
-	"cocopen-backend/models"
 	"database/sql"
 	"net/http"
 	"sort"
@@ -239,6 +239,13 @@ func CreateJadwalHandler(db *sql.DB) http.HandlerFunc {
 		if err := services.CreateJadwal(db, jadwal); err != nil {
 			utils.Error(w, http.StatusInternalServerError, "Gagal membuat jadwal: "+err.Error())
 			return
+		}
+
+		if jadwal.JenisJadwal == "umum" {
+    		utils.BroadcastNotifikasi(
+        		"Jadwal Umum Baru",
+        		"Jadwal umum telah ditambahkan di "+jadwal.Tempat+" pada "+jadwal.Tanggal.Format("2 Jan 2006"),
+    		)
 		}
 
 		utils.JSONResponse(w, http.StatusCreated, map[string]interface{}{

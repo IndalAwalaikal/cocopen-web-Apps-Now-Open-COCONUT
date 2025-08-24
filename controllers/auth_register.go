@@ -6,7 +6,6 @@ import (
 	"cocopen-backend/utils"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"time"
 )
@@ -70,12 +69,14 @@ func Register(db *sql.DB) http.HandlerFunc {
 
         hashedPassword, err := utils.HashPassword(req.Password)
         if err != nil {
-            panic(err)
+            utils.Error(w, http.StatusInternalServerError, "Gagal memproses password")
+			return
         }
 
         userID, err := services.Register(db, req.Username, req.Email, hashedPassword, "user")
         if err != nil {
-            panic(err)
+            utils.Error(w, http.StatusInternalServerError, "Gagal mendaftarkan akun")
+			return
         }
 
         verificationToken := utils.GenerateRandomToken(32)
@@ -83,7 +84,8 @@ func Register(db *sql.DB) http.HandlerFunc {
 
         err = services.GenerateVerificationToken(db, userID, verificationToken, expiresAt)
         if err != nil {
-            panic(errors.New("gagal membuat token verifikasi: " + err.Error()))
+            utils.Error(w, http.StatusInternalServerError, "Gagal membuat token verifikasi")
+			return
         }
 
         err = utils.SendVerificationEmail(req.Email, verificationToken)

@@ -35,7 +35,8 @@ func ForgotPassword(db *sql.DB) http.HandlerFunc {
                 utils.Error(w, http.StatusNotFound, "Email tidak terdaftar")
 				return
             }
-            panic(err)
+            utils.Error(w, http.StatusInternalServerError, "Terjadi kesalahan pada server")
+			return
         }
 
         token := utils.GenerateRandomToken(32)
@@ -43,7 +44,8 @@ func ForgotPassword(db *sql.DB) http.HandlerFunc {
 
         if err := services.GeneratePasswordResetToken(db, userID, token, expiresAt); 
 		err != nil {
-            panic(err)
+            utils.Error(w, http.StatusInternalServerError, "Gagal membuat token reset")
+			return
         }
 
         if err := utils.SendResetPasswordEmail(req.Email, token); 

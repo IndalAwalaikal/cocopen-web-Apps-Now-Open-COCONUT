@@ -32,7 +32,8 @@ func VerifyEmail(db *sql.DB) http.HandlerFunc {
 
         if err := services.VerifyEmail(db, userID); 
 		err != nil {
-            panic(err)
+            utils.Error(w, http.StatusInternalServerError, "Gagal memverifikasi email")
+            return
         }
 
         if err := services.DeleteVerificationToken(db, token); 

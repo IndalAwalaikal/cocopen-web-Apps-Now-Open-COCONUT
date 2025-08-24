@@ -142,5 +142,11 @@ func Setup(db *sql.DB) http.Handler {
 	mux.Handle("/pengumuman/delete", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
     	controllers.DeletePengumumanHandler(db)(w, r)
 	})))
+
+	// 🔹 Notifikasi
+	mux.Handle("/notifikasi-stream", middleware.Cors(middleware.Auth(func(w http.ResponseWriter, r *http.Request) {
+    	controllers.NotifikasiStreamHandler(w, r)
+	})))
+	
 	return mux
 }

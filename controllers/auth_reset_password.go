@@ -55,12 +55,14 @@ func ResetPassword(db *sql.DB) http.HandlerFunc {
 
         hashedPassword, err := utils.HashPassword(req.NewPassword)
         if err != nil {
-            panic(err)
+            utils.Error(w, http.StatusInternalServerError, "Gagal memproses password baru")
+			return
         }
 
         err = services.ResetPassword(db, userID, hashedPassword)
         if err != nil {
-            panic(err)
+            utils.Error(w, http.StatusInternalServerError, "Gagal mereset password")
+			return
         }
 
         err = services.DeletePasswordResetToken(db, req.Token)

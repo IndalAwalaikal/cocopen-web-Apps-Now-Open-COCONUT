@@ -88,6 +88,8 @@ func CreatePengumumanHandler(db *sql.DB) http.HandlerFunc {
 			utils.Error(w, http.StatusInternalServerError, "Gagal buat pengumuman")
 			return
 		}
+		
+		utils.BroadcastNotifikasi(req.Judul, req.Isi)
 
 		utils.JSONResponse(w, http.StatusCreated, map[string]interface{}{
 			"success": true,
